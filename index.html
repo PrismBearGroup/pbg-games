@@ -66,10 +66,16 @@ footer a{color:var(--gold)}
 // Google Play links as the install referrer and to Dam Clan's own page as src, so each platform's players can be told apart.
 (function(){
   var m=location.search.match(/[?&]from=([a-z0-9_-]{1,12})/i), from=m?m[1].toLowerCase():'';
-  if(!from)return;
+  // 3 Nov: a count of visits and button taps per tag, to the Robot telemetry Worker (no cookies, no IDs, no IP: it only adds one
+  // to a counter). A visit is {v:'links', portal:'links/<from>'}; a tap is {v:'tap-<button>'}. Read with node tools/links.js in stomp-digest.
+  var U='https://stomp-digest-telemetry.fragrant-salad-9163.workers.dev/e', P='links/'+(from||'direct');
+  function send(v){ try{ var b=JSON.stringify([{v:v,portal:P,name:'page',t:0}]); if(navigator.sendBeacon)navigator.sendBeacon(U,new Blob([b],{type:'text/plain'})); else fetch(U,{method:'POST',body:b,keepalive:true}).catch(function(){}); }catch(e){} }
+  send('links');
   var links=document.querySelectorAll('a[data-k]');
   for(var i=0;i<links.length;i++){
     var a=links[i], k=a.getAttribute('data-k');
+    a.addEventListener('click',(function(key){ return function(){ send('tap-'+key); }; })(k));
+    if(!from)continue;
     if(k==='robot-play'||k==='dam-play')a.href+='&referrer='+encodeURIComponent('utm_source='+from+'&utm_medium=social&utm_content=links_page');
     else if(k==='dam-web')a.href+='?src='+from;
   }
